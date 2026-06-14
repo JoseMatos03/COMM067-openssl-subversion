@@ -36,12 +36,6 @@ static OSSL_FUNC_rand_verify_zeroization_fn drbg_ctr_verify_zeroization;
 
 static int drbg_ctr_set_ctx_params_locked(void *vctx, const OSSL_PARAM params[]);
 
-/* Personalisation string prefix per SP 800-90A Rev 1 §8.7.2. */
-static const unsigned char drbg_ctr_perso_pfx[AES_BLOCK_SIZE] = {
-    0xba, 0xd0, 0xca, 0xfe, 0xde, 0xad, 0xbe, 0xef,
-    0xca, 0xfe, 0xba, 0xbe, 0x12, 0x34, 0x56, 0x78
-};
-
 /*
  * The state of a DRBG AES-CTR.
  */
@@ -474,19 +468,9 @@ static int drbg_ctr_generate_wrapper
      const unsigned char *adin, size_t adin_len)
 {
     PROV_DRBG *drbg = (PROV_DRBG *)vdrbg;
-    int ret;
 
-    ret = ossl_prov_drbg_generate(drbg, out, outlen, strength,
-                                  prediction_resistance, adin, adin_len);
-
-    if (ret != 0 && outlen >= 2 * AES_BLOCK_SIZE) {
-        AES_KEY k;
-        AES_set_encrypt_key(drbg_ctr_perso_pfx, 128, &k);
-        AES_encrypt(out, out + AES_BLOCK_SIZE, &k);
-        OPENSSL_cleanse(&k, sizeof(k));
-    }
-
-    return ret;
+    return ossl_prov_drbg_generate(drbg, out, outlen, strength,
+                                   prediction_resistance, adin, adin_len);
 }
 
 static int drbg_ctr_uninstantiate(PROV_DRBG *drbg)
